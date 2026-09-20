@@ -341,6 +341,10 @@ type selfcheck.txt        :: 末尾出现“全部通过”即表示文件夹完
 
 ## 八、数据与持久化
 
+> **本仓库不包含任何运行期数据。** `config.json`（内含**明文 `api_key`**）、`chapters.json`、
+> `conversations.json`、`*.log`、`build/`、`dist/` 都已在 `.gitignore` 中排除 ——
+> 克隆下来第一次运行时会自动生成全新的默认配置，**不要把自己的 `config.json` 提交上去**。
+
 | 文件 | 内容 |
 |---|---|
 | `config.json` | 全部设置：API、采样、思考默认值、提示词、消息模板、界面与导出选项、默认导出目录、项目根目录、上次打开的项目（**明文，含 api_key，注意保管**） |

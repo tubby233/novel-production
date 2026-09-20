@@ -1,7 +1,37 @@
 # 小说生成器（PySide6 + DeepSeek）
 
 一个面向 Windows 的桌面小说生成工具：粘贴大纲 → 自动切分章节 → 并发流式生成正文 → 独立检查对话 → 用户决策 → 一键导出 TXT。
-最终使用 PyInstaller 打包为**免安装单文件 exe**（Win10 / Win11，目标机器无需 Python 环境）。
+最终使用 PyInstaller 打包为**免安装绿色文件夹版**（Win10 / Win11，目标机器无需 Python 环境）。
+
+---
+
+## 零、直接下载使用（推荐）
+
+到 **[Releases](https://github.com/tubby233/novel-production/releases/latest)** 下载：
+
+| 附件 | 说明 |
+|---|---|
+| `novel-production-v1.0.0-portable-win64.zip`（约 54 MB） | **绿色便携版**：解压到任意目录，双击 `NovelGen.exe` 即可运行，**不需要安装 Python 与任何依赖** |
+| `novel-production-v1.0.0-source.zip`（约 0.2 MB） | 源代码压缩包（不含 `config.json` 等运行期数据） |
+
+便携版使用步骤：
+
+1. 把 zip 解压到任意目录（U 盘、桌面、D 盘都行），路径尽量不含特殊字符；
+2. 双击 `NovelGen.exe`（首次运行会在同级目录自动生成 `config.json`、`chapters.json`）；
+3. 菜单 **设置 → API 与模型** 填入 DeepSeek `api_key`，点「测试连接」确认可用；
+4. 粘贴/导入大纲 → 点「切分章节」（会让你输入小说名完成"立项"）→ 工具栏 **全量生成**；
+5. 出问题先看工具栏的 **运行日志** 按钮（独立窗口）。
+
+> 整个文件夹可以整体拷到别的 Win10/Win11 电脑继续用；设置与小说数据都在里面。
+> 放进 `C:\Program Files` 这类只读目录时，配置会自动回退到 `%APPDATA%\NovelGen`（不会报错）。
+
+验证下载的包是否完整（不需要 Python 环境）：
+
+```bat
+set NOVELGEN_SELFCHECK=1
+NovelGen.exe
+:: 然后打开同目录的 selfcheck.txt，末尾应为“全部通过”
+```
 
 ---
 

@@ -1,0 +1,9 @@
+# 运行依赖：仅这四项（httpx 由 openai 依赖，这里显式固定以便理解）
+# Python 3.11+（使用了 enum.StrEnum 与 PEP 604 联合类型语法）
+PySide6>=6.6,<7
+openai>=1.40
+httpx>=0.27
+certifi>=2024.2.2
+
+# 打包依赖（仅打包时需要，运行不需要）
+# pip install pyinstaller>=6.6

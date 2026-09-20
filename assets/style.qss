@@ -1,0 +1,137 @@
+/* 小说生成器 —— 全局样式
+   Qt 样式表不支持 CSS 的 max-width，长提示文本的行宽由 HelpIcon 在 HTML 里控制。 */
+
+QMainWindow, QDialog {
+    background: #f6f8fa;
+}
+
+QLabel#HelpIcon {
+    color: #0969da;
+    background: transparent;
+}
+
+QLabel#HelpIcon:hover {
+    color: #0a3069;
+}
+
+QWidget#MessageBubble {
+    background: #ffffff;
+}
+
+QPlainTextEdit, QTextBrowser, QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 3px 5px;
+    selection-background-color: #b6e3ff;
+}
+
+QPlainTextEdit:focus, QLineEdit:focus, QComboBox:focus,
+QSpinBox:focus, QDoubleSpinBox:focus {
+    border: 1px solid #0969da;
+}
+
+QPlainTextEdit[readOnly="true"] {
+    background: #fbfcfd;
+}
+
+QPushButton {
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 4px 10px;
+}
+
+QPushButton:hover {
+    background: #eef2f6;
+}
+
+QPushButton:pressed {
+    background: #e6ebf1;
+}
+
+QPushButton:disabled {
+    color: #8a8f98;
+}
+
+/* 视图切换按钮组：选中态用蓝底白字明确区分（单击即切换） */
+QPushButton:checked {
+    background: #0969da;
+    color: #ffffff;
+    border: 1px solid #0969da;
+}
+
+QPushButton:checked:hover {
+    background: #0a5cc0;
+}
+
+QToolBar {
+    background: #ffffff;
+    border-bottom: 1px solid #d8dee4;
+    spacing: 4px;
+    padding: 3px;
+}
+
+QToolBar QLabel {
+    color: #57606a;
+}
+
+QStatusBar {
+    background: #ffffff;
+    border-top: 1px solid #d8dee4;
+}
+
+QStatusBar QLabel {
+    color: #57606a;
+    padding: 0 8px;
+}
+
+QGroupBox {
+    border: 1px solid #d8dee4;
+    border-radius: 4px;
+    margin-top: 8px;
+    background: #ffffff;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 4px;
+    color: #57606a;
+}
+
+QListWidget {
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+}
+
+QListWidget::item {
+    border-bottom: 1px solid #eaeef2;
+    padding: 2px;
+}
+
+QListWidget::item:selected {
+    background: #ddf4ff;
+    color: #24292f;
+}
+
+QProgressBar {
+    background: #eaeef2;
+    border: none;
+    border-radius: 5px;
+}
+
+QProgressBar::chunk {
+    background: #1f6feb;
+    border-radius: 5px;
+}
+
+QDockWidget::title {
+    background: #f6f8fa;
+    padding: 4px;
+}
+
+QSplitter::handle {
+    background: #eaeef2;
+}

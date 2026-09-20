@@ -1,0 +1,44 @@
+# ---- 运行期数据（务必不要提交）----
+# 注意：config.json 里是明文 api_key，绝不能进仓库
+config.json
+config.json.bak
+config.json.tmp
+chapters.json
+conversations.json
+crash.log
+selfcheck.txt
+*.log
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ---- 打包产物 ----
+build/
+dist/
+*.spec.bak
+
+# ---- 编辑器 / 系统 ----
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+desktop.ini
+
+# ---- 本地 / 临时 ----
+.env
+.env.*
+.gh_pat_token
+_gh.py
+_audit.py
+_net_test.py
+_verify*.py
+_rewrite*.py
+_patch*.py
+_diag*.py
+selftest_*/
+*.tmp

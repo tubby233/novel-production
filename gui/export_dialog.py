@@ -57,7 +57,7 @@ class ExportDialog(QDialog):
         root.setSpacing(8)
 
         root.addWidget(section_title("导出范围", "exp_mode", self))
-        self.mode_all = QRadioButton("导出全部（未确认章节加标注）", self)
+        self.mode_all = QRadioButton("导出全部", self)
         self.mode_passed = QRadioButton("仅导出已合格章节", self)
         self.mode_group = QButtonGroup(self)
         self.mode_group.addButton(self.mode_all, 0)
@@ -81,11 +81,19 @@ class ExportDialog(QDialog):
         attach_help(self.append_check_box, "exp_append_check")
         root.addWidget(self.append_check_box)
 
-        # 说明：正文里本来就包含章节标题，因此不再提供"每章正文前加标题"选项
-        # （重复添加会造成标题出现两次）。每章前面只会写一行"【第 N 章】标题"的定位行。
+        self.mark_confirm_box = QCheckBox("在未确认章节正文前单独加一行标记", self)
+        self.mark_confirm_box.setToolTip(
+            "默认关闭：导出内容就是合并后的生成正文，一个字都不加。\n"
+            "开启后会在未确认章节的正文之前单独写一行你设置的标记文本，便于在成品里搜索定位。"
+        )
+        attach_help(self.mark_confirm_box, "exp_mark_confirmed")
+        root.addWidget(self.mark_confirm_box)
+
+        # 说明：正文里本来就包含章节标题，因此程序既不加标题、也不再加定位行，
+        # 每章只写"生成正文"本身（按需附检查结果）。
         title_note = QLabel(
-            "说明：正文本身已包含章节标题，程序不再在正文前重复添加标题；"
-            "每章前面只写一行“【第 N 章】章节名”用于定位（未确认章节带【未确认】标记）。",
+            "说明：生成的正文里已包含章节标题，导出时程序**不再添加任何题目或定位行**，"
+            "直接把各章正文按顺序合并。",
             self,
         )
         title_note.setWordWrap(True)
@@ -147,7 +155,7 @@ class ExportDialog(QDialog):
 
         for widget in (
             self.mode_all, self.mode_passed, self.mark_edit, self.append_check_box,
-            self.separator_box, self.encoding_combo,
+            self.mark_confirm_box, self.separator_box, self.encoding_combo,
         ):
             if hasattr(widget, "toggled"):
                 widget.toggled.connect(self._refresh_preview)
@@ -165,27 +173,41 @@ class ExportDialog(QDialog):
             self.mode_all.setChecked(True)
         self.mark_edit.setText(opts.mark_text)
         self.append_check_box.setChecked(opts.append_check_result)
+        self.mark_confirm_box.setChecked(opts.mark_confirmed)
         self.separator_box.setChecked(opts.separator)
         self.encoding_combo.setCurrentText(opts.encoding)
         self.open_box.setChecked(self.cfg.ui.export_open_after)
-        # 默认导出目录可在设置里修改；若已进入某个小说项目，主窗口会用
-        # set_default_dir() 把它改成该项目的文件夹。
+        # 默认导出目录 = 设置里的"默认导出目录"（不再用项目文件夹）
         default_dir = self.cfg.ui.export_dir or str(paths.default_export_dir())
-        self.path_edit.setText(str(Path(default_dir) / (opts.filename or "novel_export.txt")))
+        self._default_dir = default_dir
+        self.path_edit.setText(str(Path(default_dir) / self._filename_from_project()))
 
-    def set_default_dir(self, directory: str) -> None:
-        """改写默认导出目录（保留当前文件名）。"""
-        target = Path(directory)
-        if not str(directory).strip():
+    def _filename_from_project(self) -> str:
+        """默认文件名：``<小说名>.txt``（未立项时用默认名）。"""
+        project = getattr(self, "project", None)
+        if project is not None:
+            name = str(getattr(project, "name", "") or "").strip()
+            if name:
+                # 去掉文件名里不合法的字符，避免写盘失败
+                safe = "".join("_" if ch in '\\/:*?"<>|' else ch for ch in name).strip()
+                if safe:
+                    return f"{safe}.txt"
+        return "novel_export.txt"
+
+    def set_project_name(self, name: str) -> None:
+        """按当前小说项目名设置默认文件名（主窗口打开对话框后调用，目录不变）。"""
+        safe = "".join("_" if ch in '\\/:*?"<>|' else ch for ch in (name or "")).strip()
+        if not safe:
             return
-        filename = Path(self.path_edit.text().strip()).name or "novel_export.txt"
-        self.path_edit.setText(str(target / filename))
+        current = Path(self.path_edit.text().strip() or self._default_dir or ".")
+        directory = current if current.is_dir() else current.parent
+        self.path_edit.setText(str(directory / f"{safe}.txt"))
 
     def options(self) -> ExportOptions:
         return ExportOptions(
             mode=MODE_PASSED_ONLY if self.mode_passed.isChecked() else MODE_ALL,
-            include_title=False,      # 正文已自带标题，不再重复添加
             mark_text=self.mark_edit.text() or "【未确认】",
+            mark_confirmed=self.mark_confirm_box.isChecked(),
             append_check_result=self.append_check_box.isChecked(),
             separator=self.separator_box.isChecked(),
             encoding=self.encoding_combo.currentText(),

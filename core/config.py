@@ -124,6 +124,8 @@ class UiConfig:
     chapter_pattern: str = ""                    # 空 -> 使用 outline_parser 默认正则
     export_mode: str = "all_marked"              # all_marked | passed_only
     export_mark_text: str = "【未确认】"
+    #: 是否在未确认章节正文前单独加一行标记（默认关闭：导出内容就是纯生成的正文）
+    export_mark_confirmed: bool = False
     export_append_check: bool = True
     export_separator: bool = True
     export_encoding: str = "utf-8-sig"
@@ -288,6 +290,7 @@ def config_from_dict(data: dict | None, warnings: list[str] | None = None) -> Ap
             chapter_pattern=_as_str(ui.get("chapter_pattern"), ""),
             export_mode=_as_str(ui.get("export_mode"), "all_marked"),
             export_mark_text=_as_str(ui.get("export_mark_text"), "【未确认】"),
+            export_mark_confirmed=_as_bool(ui.get("export_mark_confirmed"), False),
             export_append_check=_as_bool(ui.get("export_append_check"), True),
             export_separator=_as_bool(ui.get("export_separator"), True),
             export_encoding=_as_str(ui.get("export_encoding"), "utf-8-sig"),

@@ -58,9 +58,17 @@ class ChapterChecker:
         chapter.check_conv = conv
         return conv
 
-    def build_check_message(self, content: str) -> str:
+    def build_check_message(self, content: str, *, word_count: int | None = None) -> str:
+        """构造检查消息。字数由**程序**统计后填入 ``{word_count}``。
+
+        需求：字数在程序内计算，作为参数发给检查对话，不再由检查对话统计。
+        """
+        if word_count is None:
+            word_count = MT.count_content_chars(content)
         return MT.build_check_user_msg(
-            content, text=self.cfg.template(MT.TemplateKind.CHECK)
+            content,
+            word_count=word_count,
+            text=self.cfg.template(MT.TemplateKind.CHECK),
         )
 
     # ------------------------------------------------------------------ #
@@ -76,8 +84,14 @@ class ChapterChecker:
     ) -> CheckOutcome:
         """新建检查对话并执行一次检查。"""
         conv = self.new_conversation(chapter, thinking)
+        # 字数在程序里算好，随消息一起发给检查对话（AI 不需要也不会去数）
+        word_count = MT.count_content_chars(content)
         conv.append(
-            Message(role="user", content=self.build_check_message(content), source="check")
+            Message(
+                role="user",
+                content=self.build_check_message(content, word_count=word_count),
+                source="check",
+            )
         )
         conv.reset_stream()
         conv.status = "running"

@@ -22,7 +22,7 @@ from typing import Mapping
 
 class TemplateKind(StrEnum):
     FIRST_GENERATE = "tpl_first_generate"       # 首次生成，占位符 {outline}
-    CHECK = "tpl_check"                         # 检查，占位符 {content}
+    CHECK = "tpl_check"                         # 检查，占位符 {content}、{word_count}
     REGEN_BY_CHECK = "tpl_regen_by_check"       # 根据检查结果重新生成，占位符 {check_result}
     REGEN_MANUAL = "tpl_regen_manual"           # 手动重新生成，占位符 {user_input}
 
@@ -53,6 +53,9 @@ DEFAULT_FIRST_GENERATE = (
 
 DEFAULT_CHECK = (
     "以下是小说章节正文，请按检查要求进行检查。\n"
+    "本章字数（由程序统计，约 {word_count} 字）：{word_count}\n"
+    "**不要自己去数字数**，直接采用上面这个数字；也不要因为字数问题提出修改意见，"
+    "除非检查要求里明确写了字数标准。\n"
     "正文如下：\n"
     "{content}"
 )
@@ -100,6 +103,8 @@ TEMPLATE_SPECS: dict[TemplateKind, TemplateSpec] = {
         label="检查消息模板",
         default=DEFAULT_CHECK,
         required=("content",),
+        # {word_count} 由程序统计后填入（可选占位符：旧模板里没写也不影响）
+        optional=("word_count",),
         help_key="tpl_check",
     ),
     TemplateKind.REGEN_BY_CHECK: TemplateSpec(
@@ -235,14 +240,43 @@ def render_template(
 
 
 # --------------------------------------------------------------------------- #
+# 字数统计（唯一实现，全程序共用）
+# --------------------------------------------------------------------------- #
+def count_content_chars(text: str) -> int:
+    """统计正文字数：**不计任何空白字符**（空格、制表、换行都排除）。
+
+    只算"实打实的字符"，因此中文小说里这个数字与"字数"的直觉基本一致。
+    程序侧统计一次，作为 ``{word_count}`` 传给检查对话，不再让 AI 自己数。
+    """
+    return sum(1 for char in (text or "") if not char.isspace())
+
+
+def format_word_count(count: int) -> str:
+    """把字数格式化成界面/消息里用的中文串（带千位分隔）。"""
+    return f"{int(count):,}"
+
+
+# --------------------------------------------------------------------------- #
 # 四类消息的便捷构造
 # --------------------------------------------------------------------------- #
 def build_first_generate_user_msg(outline: str, *, text: str | None = None) -> str:
     return render_template(TemplateKind.FIRST_GENERATE, {"outline": outline}, text=text)
 
 
-def build_check_user_msg(content: str, *, text: str | None = None) -> str:
-    return render_template(TemplateKind.CHECK, {"content": content}, text=text)
+def build_check_user_msg(
+    content: str, *, word_count: int | None = None, text: str | None = None
+) -> str:
+    """构造检查消息。
+
+    ``word_count`` 为 None 时由本函数自行统计（调用方通常显式传入程序算好的值）。
+    """
+    if word_count is None:
+        word_count = count_content_chars(content)
+    return render_template(
+        TemplateKind.CHECK,
+        {"content": content, "word_count": format_word_count(word_count)},
+        text=text,
+    )
 
 
 def build_regen_by_check_user_msg(check_result: str, *, text: str | None = None) -> str:

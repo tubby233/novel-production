@@ -532,14 +532,22 @@ _reg(ParamHelp(
     name_cn="检查消息模板",
     name_en="check template",
     kind=HelpKind.TEMPLATE,
-    range_text="必须包含占位符 {content}",
+    range_text="必须包含占位符 {content}；可选占位符 {word_count}",
     default_text="内置默认文案（见设置界面）",
-    effect="触发检查时，程序把该章最后一次生成的正文填入 {content} 后，作为检查对话的第一条 user 消息发送。",
+    effect=(
+        "触发检查时，程序把该章最后一次生成的正文填入 {content}，"
+        "并把**程序统计好的字数**填入 {word_count}，作为检查对话的第一条 user 消息发送。"
+    ),
     constraints=(
+        "字数由程序统计（不计空格与换行），检查对话不需要也不应该自己去数。",
+        "内置默认模板会明确告诉模型“不要自己数字数”，因此不会出现字数统计偏差。",
         "检查对话是全新独立对话，system 消息来自“检查提示词”，与本模板互不干扰。",
         "检查结果会原样放进界面的可编辑文本框，程序不解析其内容。",
     ),
-    advice=("检查提示词留空时，建议在检查模板里写清检查维度（例如设定一致性、文风、节奏）。",),
+    advice=(
+        "检查提示词留空时，建议在检查模板里写清检查维度（例如设定一致性、文风、节奏）。",
+        "想按字数判断篇幅，直接引用 {word_count} 即可。",
+    ),
     related=("system_check", "tpl_regen_by_check"),
 ))
 
@@ -946,12 +954,13 @@ _reg(ParamHelp(
     name_cn="导出范围",
     name_en="export mode",
     kind=HelpKind.CHOICE,
-    choices=("导出全部（未确认加标注）", "仅导出已合格章节"),
-    default_text="导出全部（未确认加标注）",
-    effect="决定导出哪些章节：全部章节，或只导出你点过“接受”的合格章节。",
+    choices=("导出全部", "仅导出已合格章节"),
+    default_text="导出全部",
+    effect="决定导出哪些章节：全部章节，或只导出你点过“通过”的合格章节。",
     constraints=(
         "“未确认”指状态不是“合格”的章节（待生成/生成中/待检查/检查中/待决策/出错）。",
         "仅导出已合格章节时，未合格章节会被整体跳过。",
+        "导出内容是各章**生成正文按顺序合并**，程序不加标题、不加定位行。",
     ),
     advice=("通读阶段用“导出全部”，准备交稿时用“仅导出已合格章节”。",),
     related=("exp_mark_text", "act_accept"),
@@ -964,10 +973,26 @@ _reg(ParamHelp(
     kind=HelpKind.TEXT,
     range_text="任意文本，默认【未确认】",
     default_text="【未确认】",
-    effect="以“导出全部”模式导出时，加在未确认章节标题之后，便于在成品中定位待办。",
-    constraints=("只加在标题后，不修改正文任何内容。",),
+    effect="开启“在未确认章节正文前单独加一行标记”后，用这段文本标记未确认章节，便于在成品里搜索定位。",
+    constraints=("只单独加一行，不修改正文任何内容。",),
     advice=("可用【未确认】或 [待审]，便于全文档搜索。",),
-    related=("exp_mode", "exp_append_check"),
+    related=("exp_mode", "exp_append_check", "exp_mark_confirmed"),
+))
+
+_reg(ParamHelp(
+    key="exp_mark_confirmed",
+    name_cn="加未确认标记行",
+    name_en="mark unconfirmed",
+    kind=HelpKind.BOOL,
+    default_text="关闭",
+    effect="开启后在未确认章节的正文**之前**单独写一行标记文本；关闭时导出内容就是合并后的纯生成正文。",
+    constraints=(
+        "程序**不会**再给每章补“【第 N 章】章节名”这类定位行，也不会加章节标题——"
+        "生成的正文里本来就带标题。",
+        "默认关闭，保证导出结果与正文完全一致。",
+    ),
+    advice=("准备交稿/发布时保持关闭；需要通读定位待办时再临时开启。",),
+    related=("exp_mark_text", "exp_mode"),
 ))
 
 _reg(ParamHelp(
@@ -1027,11 +1052,14 @@ _reg(ParamHelp(
     name_cn="导出路径",
     name_en="export path",
     kind=HelpKind.TEXT,
-    default_text="我的文档\\novel_export.txt",
-    effect="导出文件的保存位置与文件名。",
-    constraints=("若目标文件已存在会询问是否覆盖。",),
+    default_text="<默认导出目录>\\<小说名>.txt",
+    effect="导出文件的保存位置与文件名。**默认文件名就是当前小说项目名**（如「星海归途.txt」）。",
+    constraints=(
+        "默认目录取“设置 → 界面与流程 → 默认导出目录”，**不是**项目文件夹。",
+        "若目标文件已存在会询问是否覆盖。",
+    ),
     advice=("文件名建议带上日期或书名，便于区分多次导出。",),
-    related=("exp_encoding",),
+    related=("exp_encoding", "exp_dir", "project_dir"),
 ))
 
 _reg(ParamHelp(

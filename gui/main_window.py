@@ -925,18 +925,23 @@ class MainWindow(QMainWindow):
             return
         dialog = ExportDialog(chapters, self.cfg, self)
         dialog.exported.connect(self._on_exported)
-        # 已立项时默认导出到项目文件夹，否则用设置里的默认导出目录
+        # 默认文件名 = 当前小说项目名；目录用"设置 → 默认导出目录"
         if self.project is not None:
-            dialog.set_default_dir(str(self.project.root))
+            dialog.set_project_name(self.project.name)
         dialog.exec()
 
     def _on_exported(self, path: str, options: object) -> None:
         if isinstance(options, ExportOptions):
             self.cfg.ui.export_mode = options.mode
             self.cfg.ui.export_mark_text = options.mark_text
+            self.cfg.ui.export_mark_confirmed = options.mark_confirmed
             self.cfg.ui.export_append_check = options.append_check_result
             self.cfg.ui.export_separator = options.separator
             self.cfg.ui.export_encoding = options.encoding
+            # 只有用户真的换了目录才更新"默认导出目录"，避免只是改了文件名就覆盖设置
+            target_dir = str(Path(path).parent)
+            if target_dir != config_mod.resolve_export_dir(self.cfg):
+                self.cfg.ui.export_dir = target_dir
         try:
             config_mod.save_config(self.cfg)
         except OSError as exc:
@@ -1332,7 +1337,7 @@ class MainWindow(QMainWindow):
             "act_stop_all", "act_trigger_check", "act_regen_by_check", "act_regen_manual",
             "act_accept", "act_postpone", "act_edit_content", "act_send_manual",
             "act_view_history", "act_clear_conversation", "act_switch_view",
-            "exp_mode", "exp_mark_text", "exp_append_check", "exp_dir",
+            "exp_mode", "exp_mark_text", "exp_mark_confirmed", "exp_append_check", "exp_dir",
             "exp_separator", "exp_encoding", "exp_path", "exp_preview", "exp_open_after",
             "project_dir", "act_open_project", "act_show_log", "state_queued",
             "act_queue_panel",

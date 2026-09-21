@@ -333,10 +333,13 @@ class ChapterView(QWidget):
         self.check_edit = QPlainTextEdit(page)
         self.check_edit.setPlaceholderText(
             "检查完成后，检查对话的输出会自动填入这里；你可以直接修改，"
-            "再点右侧的“按要求重新生成正文”。"
+            "再点顶部决策行的“按要求重新生成正文”。\n\n"
+            "💡 这个框的高度可以直接拖动调整：把鼠标移到它和下方对话之间的分隔线上拖动即可。"
         )
-        self.check_edit.setMinimumHeight(110)
-        self.check_edit.setMaximumHeight(260)
+        self.check_edit.setMinimumHeight(80)
+        self.check_edit.setToolTip(
+            "检查结果可编辑文本框。\n拖动它与下方对话之间的分隔条可以自由调整高度。"
+        )
         attach_help(self.check_edit, "act_regen_by_check")
         self.check_edit.textChanged.connect(self._on_check_changed)
         result_row.addWidget(self.check_edit, 1)
@@ -359,29 +362,79 @@ class ChapterView(QWidget):
         self.decision_hint.setStyleSheet("color:#9a6700; font-size:11px;")
         layout.addWidget(self.decision_hint)
 
-        # ---------------- 检查对话（完整对话视图） ---------------- #
+        # ---------------- 检查结果框 + 检查对话：可拖动分隔 ---------------- #
+        # 需求：检查结果显示框的大小可调 —— 这里用垂直 QSplitter 承载
+        #       "检查结果编辑框" 与 "检查对话"，中间的分隔条可直接拖动。
+        self.check_splitter = QSplitter(Qt.Orientation.Vertical, page)
+        self.check_splitter.setChildrenCollapsible(False)
+        self.check_splitter.setHandleWidth(8)
+
+        result_pane = QWidget(self.check_splitter)
+        result_layout = QVBoxLayout(result_pane)
+        result_layout.setContentsMargins(0, 0, 0, 0)
+        result_layout.setSpacing(4)
+        result_layout.addWidget(QLabel("<b>检查结果显示框（高度可拖动）</b>", result_pane))
+        self.check_edit.setParent(result_pane)
+        result_layout.addWidget(self.check_edit, 1)
+        self.check_splitter.addWidget(result_pane)
+
+        conv_pane = QWidget(self.check_splitter)
+        conv_layout = QVBoxLayout(conv_pane)
+        conv_layout.setContentsMargins(0, 0, 0, 0)
+        conv_layout.setSpacing(4)
         conv_head = QHBoxLayout()
         conv_head.setSpacing(6)
-        conv_head.addWidget(QLabel("<b>检查对话（完整对话）</b>", page))
-        conv_head.addWidget(HelpIcon("act_view_history", page, size=12))
+        conv_head.addWidget(QLabel("<b>检查对话（完整对话）</b>", conv_pane))
+        conv_head.addWidget(HelpIcon("act_view_history", conv_pane, size=12))
         conv_head.addStretch(1)
-        layout.addLayout(conv_head)
+        self.resize_check_buttons = QPushButton("放大结果框", conv_pane)
+        self.resize_check_buttons.setToolTip(
+            "在几种常用比例之间切换检查结果框的高度（也可以直接拖动分隔条）。"
+        )
+        self.resize_check_buttons.clicked.connect(self._cycle_check_box_size)
+        conv_head.addWidget(self.resize_check_buttons)
+        conv_layout.addLayout(conv_head)
 
         self.check_view = ConversationView(
             "check",
             global_hide_reasoning=global_hide_reasoning,
             collapse_tokens=collapse_tokens,
-            parent=page,
+            parent=conv_pane,
         )
         self.check_view.manualMessageSent.connect(self.checkManualMessage.emit)
         self.check_view.clearRequested.connect(self.clearCheckConversation.emit)
         self.check_view.stopRequested.connect(self.stopChapter.emit)
         self.check_view.thinkingChanged.connect(self.checkThinkingChanged.emit)
-        layout.addWidget(self.check_view, 1)
+        conv_layout.addWidget(self.check_view, 1)
+        self.check_splitter.addWidget(conv_pane)
+
+        self._check_box_ratio_index = 0
+        self.check_splitter.setStretchFactor(0, 1)
+        self.check_splitter.setStretchFactor(1, 2)
+        layout.addWidget(self.check_splitter, 1)
 
         # 检查视图默认就展示完整对话（按需求：进入检查视图即可看到全过程）
         self.check_view.show_detail(True)
         return page
+
+    # ------------------------------------------------------------------ #
+    # 检查结果框的高度调整
+    # ------------------------------------------------------------------ #
+    #: 预设比例（检查结果框 : 检查对话）
+    _CHECK_BOX_RATIOS: tuple[tuple[int, int], ...] = ((1, 2), (1, 1), (2, 1), (3, 1))
+
+    def _cycle_check_box_size(self) -> None:
+        """在几个预设高度之间循环切换检查结果框；也可直接拖动分隔条。"""
+        if not hasattr(self, "check_splitter"):
+            return
+        total = max(200, self.check_splitter.height())
+        self._check_box_ratio_index = (self._check_box_ratio_index + 1) % len(
+            self._CHECK_BOX_RATIOS
+        )
+        top_ratio, bottom_ratio = self._CHECK_BOX_RATIOS[self._check_box_ratio_index]
+        span = top_ratio + bottom_ratio
+        top = int(total * top_ratio / span)
+        self.check_splitter.setSizes([top, max(80, total - top)])
 
     # ------------------------------------------------------------------ #
     def show_check_conversation(self) -> None:

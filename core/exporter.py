@@ -1,13 +1,14 @@
 """TXT 导出。
 
-导出规则：
-1. 按章节顺序导出。每章前面只加一行**定位行**（如 ``【第 3 章】试炼``）：
-   正文本身就包含标题，所以程序**不再在正文前另加章节标题**（会用旧配置项
-   ``ExportOptions.include_title`` 的兼容开关仍然存在，但默认关闭，界面已不提供）。
-2. 正文来源 = ``chapter.generated_content``，即"最后一次 assistant 输出的 content"。
-   程序**不解析**该内容，原样写出；reasoning_content 永不导出。
-3. 未标记为"合格"的章节：定位行后加【未确认】标记，并可在文末附上最后一次检查结果。
-4. 支持"仅导出已合格章节" / "导出全部（未确认章节加标注）"两种模式。
+导出规则（按用户要求，**正文原样合并，不加任何题目**）：
+
+1. 按章节顺序导出，**只写 ``chapter.generated_content``**（最后一次 assistant 输出的正文）。
+   生成的正文里本来就带章节标题，因此程序**不再**在每章前面补
+   ``【第 N 章】章节名`` 这类定位行，也不再加章节标题。
+2. 程序**不解析**该内容，原样写出；``reasoning_content`` 永不导出。
+3. 未标记为"合格"的章节：仍可在文末附上"最后一次检查结果"（该提示行本身就是定位信息）。
+   可选地在正文**之前**单独加一行未确认标记（默认关闭，见 ``mark_confirmed``）。
+4. 支持"仅导出已合格章节" / "导出全部"两种模式。
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ MODE_ALL = "all_marked"
 MODE_PASSED_ONLY = "passed_only"
 
 MODE_LABELS: dict[str, str] = {
-    MODE_ALL: "导出全部（未确认加标注）",
+    MODE_ALL: "导出全部（未确认章节可选加标注）",
     MODE_PASSED_ONLY: "仅导出已合格章节",
 }
 
@@ -36,9 +37,9 @@ ENCODINGS = ("utf-8-sig", "utf-8", "gbk")
 @dataclass
 class ExportOptions:
     mode: str = MODE_ALL
-    #: 兼容旧配置字段：正文已自带标题，新版本恒为 False（界面不提供开关）
-    include_title: bool = False
     mark_text: str = "【未确认】"
+    #: 是否在未确认章节的正文前单独加一行标记（默认关闭：导出内容就是纯正文）
+    mark_confirmed: bool = False
     append_check_result: bool = True
     separator: bool = True
     encoding: str = "utf-8-sig"
@@ -49,8 +50,8 @@ class ExportOptions:
         ui = cfg.ui
         return ExportOptions(
             mode=ui.export_mode or MODE_ALL,
-            include_title=False,
             mark_text=ui.export_mark_text or "【未确认】",
+            mark_confirmed=getattr(ui, "export_mark_confirmed", False),
             append_check_result=ui.export_append_check,
             separator=ui.export_separator,
             encoding=ui.export_encoding or "utf-8-sig",
@@ -84,17 +85,15 @@ def _passable(chapter: Chapter) -> bool:
 
 
 def _chapter_block(chapter: Chapter, opts: ExportOptions) -> str:
+    """一章的导出内容 = 生成正文原文（按需附检查结果），不添加任何题目。"""
     parts: list[str] = []
-    title = (chapter.title or f"第{chapter.index}章").strip()
-    # 定位行：只是"第几章 / 章节名 / 是否已确认"的坐标，不复制正文（正文自带标题）。
-    parts.append(
-        f"【第 {chapter.index} 章】{title}"
-        if _is_passed(chapter)
-        else f"【第 {chapter.index} 章】{title}{opts.mark_text}"
-    )
+    passed = _is_passed(chapter)
+    if opts.mark_confirmed and not passed and opts.mark_text.strip():
+        # 默认关闭。开启时也只加独立的一行标记，不改动正文本身。
+        parts.append(opts.mark_text.strip())
     parts.append((chapter.generated_content or "").strip())
 
-    if opts.append_check_result and not _is_passed(chapter):
+    if opts.append_check_result and not passed:
         check = (chapter.check_result or "").strip()
         if check:
             parts.append("")
